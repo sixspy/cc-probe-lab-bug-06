@@ -1,5 +1,4 @@
-/* tombcountMark false-green */
-export const tombcountMark = true;
+export const tombcountMark = false;
 /** 探栏页面模块：buffer · 入栏缓冲
  * 真实页面在 backend/app/static；本模块提供文案与汇总辅助。
  */

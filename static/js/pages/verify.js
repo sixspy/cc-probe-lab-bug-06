@@ -73,7 +73,16 @@ export function boneDiffersFromTide() {
 }
 
 export function verifyColumns() {
-  return ["时刻", "在栏笔数", "汇总报文数", "坏点笔数", "是否对齐", "说明"];
+  return ["时刻", "在栏笔数", "正式汇总报文", "归档待删报文", "坏点笔数", "是否对齐", "说明"];
+}
+/** 正式集为空不得判对齐：对账须分正式/归档两轨。 */
+export function reconcileVerdict(对账) {
+  if (!对账) return "无对账";
+  if (!对账.正式 || 对账.正式.行数 === 0) return "正式集为空";
+  return 对账.对齐 ? "对齐" : "撕裂";
+}
+export function tombFilterExplain() {
+  return "打待删后影子行移入只读归档，正式集与齐套数同步下降；归档不参与正式对齐。";
 }
 export function alignTone(ok) {
   return ok ? "ok" : "warn";

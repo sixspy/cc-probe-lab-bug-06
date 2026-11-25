@@ -21,15 +21,43 @@
 
     <section class="卷">
       <div class="工具"><button class="按钮 青" id="结">结当前栏</button></div>
-      <div class="表绕"><table><thead><tr><th>汇总编号</th><th>栏号</th><th>站点</th><th>指标</th><th>报文数</th><th>均值</th></tr></thead><tbody id="表"></tbody></table></div>
+      <div class="横排 下距12" id="齐套灯"></div>
+      <div class="横排 下距12" id="分账"></div>
+      <div class="表绕"><table><thead><tr><th>汇总编号</th><th>栏号</th><th>站点</th><th>指标</th><th>报文数</th><th>均值</th><th>操作</th></tr></thead><tbody id="表"></tbody></table></div>
+      <h2 class="上距12">待删影子（只读归档）</h2>
+      <div class="表绕"><table><thead><tr><th>汇总编号</th><th>栏号</th><th>站点</th><th>指标</th><th>报文数</th><th>归档时</th><th>待删批次</th></tr></thead><tbody id="归档表"></tbody></table></div>
     </section>
     <script>
     async function 刷() {
+      const 灯 = await 探栏.getJSON("/api/站点汇总账/齐套");
+      const 灯盒 = document.getElementById("齐套灯");
+      灯盒.innerHTML = "";
+      const chip = 灯.假满
+        ? 探栏.徽章("齐套假满", "危")
+        : 探栏.徽章(灯.齐套 ? "齐套" : "未齐套", 灯.齐套 ? "好" : "危");
+      灯盒.innerHTML =
+        `<div class="水卡"><div class="数">${灯.齐套数}</div><div class="标">齐套（正式）</div></div>` +
+        `<div class="水卡"><div class="数">${灯.影子行数}</div><div class="标">待删影子</div></div>` +
+        `<div class="水卡"><div class="标">判定</div><div class="v">${chip}</div></div>`;
+      const 账 = await 探栏.getJSON("/api/站点汇总账/对账");
+      document.getElementById("分账").innerHTML =
+        `<div class="只读框">正式 ${账.正式.行数} 行 / 报文 ${账.正式.报文数} · 归档 ${账.归档.行数} 行 / 待删报文 ${账.归档.待删报文数} · 对齐 ${账.对齐 ? "是" : "否"}</div>`;
+
       const rows = await 探栏.getJSON("/api/站点汇总账");
       const tb = document.getElementById("表"); tb.innerHTML = "";
-      if (!rows.length) { tb.innerHTML = `<tr><td colspan="6">${探栏.空态("尚无汇总。入栏后点结当前栏。")}</td></tr>`; return; }
-      for (const r of rows) {
-        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.汇总编号)}</td><td>${探栏.安全文本(r.栏号)}</td><td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td><td>${r.报文数}</td><td>${r.均值}</td>`));
+      if (!rows.length) { tb.innerHTML = `<tr><td colspan="7">${探栏.空态("尚无正式汇总。入栏后点结当前栏。")}</td></tr>`; }
+      else for (const r of rows) {
+        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.汇总编号)}</td><td>${探栏.安全文本(r.栏号)}</td><td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td><td>${r.报文数}</td><td>${r.均值}</td><td><button class="按钮 次 打待删" data-编号="${探栏.安全文本(r.汇总编号)}">打待删</button></td>`));
+      }
+      for (const b of tb.querySelectorAll(".打待删")) {
+        b.onclick = async () => { await 探栏.postJSON("/api/站点汇总账/打待删", { 汇总编号: b.dataset.编号 }); await 刷(); };
+      }
+
+      const 归档 = await 探栏.getJSON("/api/站点汇总账/归档");
+      const ab = document.getElementById("归档表"); ab.innerHTML = "";
+      if (!归档.length) { ab.innerHTML = `<tr><td colspan="7">${探栏.空态("无待删影子。打待删后正式行会移入此只读归档。")}</td></tr>`; return; }
+      for (const r of 归档) {
+        ab.appendChild(探栏.行(`<td>${探栏.安全文本(r.汇总编号)}</td><td>${探栏.安全文本(r.栏号)}</td><td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td><td>${r.报文数}</td><td>${探栏.安全文本(r.归档时)}</td><td>${探栏.安全文本(r.待删批次)}</td>`));
       }
     }
     document.getElementById("结").onclick = async () => { await 探栏.postJSON("/api/结栏/跑"); await 刷(); };

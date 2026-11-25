@@ -1,4 +1,8 @@
-"""待删齐套收口面：页灯可绿，切流/双写命运未贯彻，读轨仍旧。"""
+"""待删齐套收口面：齐套判定只读未删正式集，芯片随正式集落值。
+
+历史字段（active_read/cutover_fp/live_flag/archive_*）保留为只读说明，
+不再作为齐套判定依据；归档真相在 `站点汇总账/归档` 与 `汇总对账`。
+"""
 from __future__ import annotations
 
 from app.db import 连接
@@ -83,59 +87,62 @@ def live_flag() -> str:
 
 
 def archive_rows() -> list[dict]:
+    """归档轨真相：读只读的 `汇总归档`（待删影子行）。"""
     conn = 连接()
     try:
         _ensure(conn)
-        rows = conn.execute(
-            "SELECT 键,值 FROM 探栏元 WHERE 键 LIKE ? ORDER BY 键",
-            (f"{_SLUG}_archive_%",),
-        ).fetchall()
-        return [{"键": r["键"], "值": r["值"]} for r in rows]
+        try:
+            rows = conn.execute(
+                "SELECT * FROM 汇总归档 ORDER BY 归档时"
+            ).fetchall()
+        except Exception:
+            rows = []
+        return [dict(r) for r in rows]
     finally:
         conn.close()
 
 
 def paint_ok() -> str:
+    """兼容旧接口：仅在正式集确实齐套时才点亮芯片，否则落真相值。"""
+    from app.services import 目录
+
     conn = 连接()
     try:
-        _set(conn, f"{_SLUG}_panel_chip", _OK)
-        _set(conn, f"{_SLUG}_display_only", "1")
+        _ensure(conn)
+        目录._落芯片(conn)
         conn.commit()
-        return _OK
+        return panel_chip()
     finally:
         conn.close()
 
 
 def commit_action(payload: dict | None = None) -> dict:
-    """Broken：亮灯，读轨仍 old_track，无耐久命运。"""
+    """记录动作；芯片随正式集落值，不得凭动作凭空点亮。"""
     payload = payload or {}
     conn = 连接()
     try:
         c = int(_get(conn, f"{_SLUG}_counter", "0") or "0") + 1
         _set(conn, f"{_SLUG}_counter", str(c))
-        _set(conn, f"{_SLUG}_panel_chip", _OK)
         _set(conn, f"{_SLUG}_last_payload", str(payload)[:200])
-        _set(conn, f"{_SLUG}_gate_bypass", "1")
-        _set(conn, f"{_SLUG}_active_read", _OLD)
-        _set(conn, f"{_SLUG}_reject_refresh", "0")
-        if not _get(conn, f"{_SLUG}_cutover_fp", ""):
-            _set(conn, f"{_SLUG}_cutover_fp", "stale-fp")
-        _set(conn, f"{_SLUG}_pack_decoy", f"stale-fp|{c}")
-        _set(conn, f"{_SLUG}_truth", _BAD)
-        _set(conn, f"{_SLUG}_mode", "")
-        _set(conn, f"{_SLUG}_live_flag", "")
+        _set(conn, f"{_SLUG}_active_read", _CUTOVER if payload.get("commit") else _OLD)
+        _ensure(conn)
+        from app.services import 目录
+
+        目录._落芯片(conn)
         conn.commit()
+        snap = snapshot()
         return {
             "ok": True,
-            "chip": _OK,
+            "chip": snap["panel_chip"],
             "title": _TITLE,
             "counter": c,
-            "active_read": _OLD,
-            "cutover_fp": "stale-fp",
-            "reject_refresh": False,
-            "archive_count": 0,
-            "live_flag": "",
-            "message": f"{_TITLE}已落台",
+            "active_read": snap["active_read"],
+            "cutover_fp": snap["cutover_fp"],
+            "reject_refresh": snap["reject_refresh"],
+            "archive_count": snap["archive_count"],
+            "live_flag": snap["live_flag"],
+            "aligned": snap["aligned"],
+            "message": f"{_TITLE}动作已记录，芯片按正式集判定",
         }
     finally:
         conn.close()
@@ -157,14 +164,12 @@ def snapshot() -> dict:
     chip = panel_chip()
     truth = truth_flag()
     arch = archive_rows()
-    aligned = (
-        chip == truth == _OK
-        and ref in (_CUTOVER, _LIVE)
-        and (
-            (ref == _CUTOVER and reject_refresh() and cutover_fp() not in ("", "stale-fp"))
-            or (ref == _LIVE and bool(live_flag()) and len(arch) > 0)
-        )
-    )
+    # 面板对齐以正式集实值为准，不再以旧读轨/假指纹判定。
+    from app.services import 目录
+
+    real = 目录.汇总对账()
+    real_ok = bool(real["对齐"] and real["正式"]["行数"] > 0)
+    aligned = chip == _OK and truth == _OK and real_ok
     return {
         "title": _TITLE,
         "panel_chip": chip,
@@ -176,7 +181,9 @@ def snapshot() -> dict:
         "live_flag": live_flag(),
         "aligned": aligned,
         "panel_pack_mismatch": chip == _OK and not aligned,
-        "gate_bypass": True,
+        "gate_bypass": False,
+        "正式行数": real["正式"]["行数"],
+        "待删影子行数": real["归档"]["行数"],
     }
 
 

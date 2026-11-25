@@ -68,3 +68,16 @@ def 按指标汇总() -> dict:
         return {r["指标键"]: {"笔数": r["c"], "均值": r["均"]} for r in rows}
     finally:
         conn.close()
+
+
+def 汇总对账() -> dict:
+    """站点汇总账页的正式/归档分账与待删过滤可见。"""
+    from app.services import 目录
+
+    return 目录.汇总对账()
+
+
+def 齐套灯() -> dict:
+    from app.services import 目录
+
+    return 目录.齐套灯()

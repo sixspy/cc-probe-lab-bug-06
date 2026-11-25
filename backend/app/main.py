@@ -67,6 +67,30 @@ async def api_汇总():
     return jsonify(目录.汇总列表())
 
 
+@app.get("/api/站点汇总账/归档")
+async def api_汇总归档():
+    return jsonify(目录.归档列表())
+
+
+@app.get("/api/站点汇总账/对账")
+async def api_汇总对账():
+    return jsonify(目录.汇总对账())
+
+
+@app.get("/api/站点汇总账/齐套")
+async def api_汇总齐套():
+    return jsonify({"齐套数": 目录.汇总齐套数(), **目录.齐套灯()})
+
+
+@app.post("/api/站点汇总账/打待删")
+async def api_汇总打待删():
+    body = await request.get_json(force=True, silent=True) or {}
+    编号 = str(body.get("汇总编号") or "")
+    if not 编号:
+        return jsonify({"ok": False, "说明": "缺汇总编号"}), 400
+    return jsonify(目录.打待删(编号, str(body.get("说明") or "")))
+
+
 @app.get("/api/坏点匣")
 async def api_坏点():
     return jsonify(目录.坏点列表())
@@ -151,6 +175,16 @@ async def api_按站点():
 @app.get("/api/统计/按指标")
 async def api_按指标():
     return jsonify(统计.按指标汇总())
+
+
+@app.get("/api/统计/汇总对账")
+async def api_统计汇总对账():
+    return jsonify(统计.汇总对账())
+
+
+@app.get("/api/统计/齐套")
+async def api_统计齐套():
+    return jsonify(统计.齐套灯())
 
 
 @app.get("/api/统计/装载摘要")

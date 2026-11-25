@@ -23,6 +23,11 @@
       <div class="横排 下距12" id="命运统计"></div>
       <div class="表绕"><table><thead><tr><th>报文编号</th><th>站点</th><th>指标</th><th>读数</th><th>观测时</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
     </section>
+    <section class="卷">
+      <h2>统计口径 · 待删过滤</h2>
+      <div class="横排 下距12" id="对账统计"></div>
+      <p class="说明">统计按「正式汇总」口径计数：打待删后的影子行移入只读归档，不计入齐套，也不计入正式汇总报文。</p>
+    </section>
     <section class="卷"><div class="双栏"><p class="说明">报文是装载入流。命运应可读：已装载→已入栏/已坏点→已汇总。</p><div class="侧注">子方向：采集入库质控。行业皮：环境监测传感站。</div></div></section>
     <script>
     (async () => {
@@ -31,6 +36,12 @@
       box.innerHTML = Object.entries(fate).map(([k,v]) =>
         `<div class="水卡"><div class="数">${v}</div><div class="标">${探栏.安全文本(k)}</div></div>`
       ).join("") || 探栏.空态("尚无命运统计");
+      const 账 = await 探栏.getJSON("/api/统计/汇总对账");
+      document.getElementById("对账统计").innerHTML =
+        `<div class="水卡"><div class="数">${账.正式.行数}</div><div class="标">正式汇总行</div></div>` +
+        `<div class="水卡"><div class="数">${账.正式.报文数}</div><div class="标">正式报文</div></div>` +
+        `<div class="水卡"><div class="数">${账.归档.行数}</div><div class="标">待删影子行</div></div>` +
+        `<div class="水卡"><div class="数">${账.归档.待删报文数}</div><div class="标">待删报文</div></div>`;
       const rows = await 探栏.getJSON("/api/观测报文");
       const tb = document.getElementById("表");
       if (!rows.length) { tb.innerHTML = `<tr><td colspan="6">${探栏.空态("尚无报文。回探栏台灌入栏成汇总样例。")}</td></tr>`; return; }

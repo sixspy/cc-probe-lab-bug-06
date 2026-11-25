@@ -33,7 +33,10 @@
 
 def 仓情() -> dict:
     from app.services import tombcount as _tombcount
+    from app.services import 目录 as _目录
+
     _snap = _tombcount.dashboard()
+    _灯 = _目录.齐套灯()
     return {
         "中文名": 中文名,
         "前缀": 前缀,
@@ -45,12 +48,14 @@ def 仓情() -> dict:
         "模块页": 模块页,
         "页面形态": "多 HTML 真翻页 + 底栏导航",
         "阶段说明": 阶段说明,
-        "命运词典": 命运词典,
+        "命运词典": {**命运词典, "待删": "已打待删，移入只读归档，不计入齐套"},
         "tombcount_board": _snap,
-        "tombcount_chip": _snap.get("panel_chip", "齐套已亮"),
-        "tombcount_truth": _snap.get("truth", "待删仍计"),
-        "tombcount_aligned": _snap.get("aligned", False),
+        "tombcount_chip": _灯["芯片"],
+        "tombcount_truth": "齐套已亮" if _灯["齐套"] else "待删仍计",
+        "tombcount_aligned": _灯["齐套"],
         "tombcount_title": "待删齐套",
+        "tombcount_齐套数": _灯["正式行数"],
+        "tombcount_影子行数": _灯["影子行数"],
     }
 
 

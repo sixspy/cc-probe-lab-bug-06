@@ -1,5 +1,4 @@
-/* tombcount panel chip 齐套已亮 */
-export const tombcountChip = '齐套已亮';
+export const tombcountChip = '按正式集判定';
 /** 探栏页面模块：home · 探栏台
  * 真实页面在 backend/app/static；本模块提供文案与汇总辅助。
  */

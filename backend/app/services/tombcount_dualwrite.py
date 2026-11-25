@@ -13,17 +13,15 @@ def apply_dualwrite(note: str = "") -> dict:
     conn = 连接()
     try:
         core._ensure(conn)
-        core._set(conn, f"{_SLUG}_dual_chip", _OK)
-        core._set(conn, f"{_SLUG}_dual_truth", core._BAD if hasattr(core, "_BAD") else "坏")
         core._set(conn, f"{_SLUG}_dual_note", note or _TITLE)
-        core._set(conn, f"{_SLUG}_panel_chip", _OK)
-        # skip archive_% + live_flag + active_read=live_flag
+        from app.services import 目录
+
+        目录._落芯片(conn)
         conn.commit()
     finally:
         conn.close()
-    core.paint_ok()
     return {
-        "dual_chip": _OK,
+        "dual_chip": core.panel_chip(),
         "truth": core.truth_flag(),
         "active_read": core.active_read_ref(),
         "archive_count": len(core.archive_rows()),
@@ -35,13 +33,13 @@ def dual_board() -> dict:
     apply_dualwrite()
     dash = core.dashboard()
     return {
-        "dual_chip": _OK,
+        "dual_chip": core.panel_chip(),
         "truth": core.truth_flag(),
         "active_read": core.active_read_ref(),
         "archive": core.archive_rows(),
         "live_flag": core.live_flag(),
         "dash": dash,
         "fate": "dualwrite",
-        "panel_pack_mismatch": True,
+        "panel_pack_mismatch": dash.get("panel_chip") == core._OK and not dash.get("aligned"),
         "title": f"{_TITLE}双写面",
     }

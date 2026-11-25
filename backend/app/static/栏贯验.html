@@ -21,15 +21,24 @@
 
     <section class="卷">
       <div class="工具"><button class="按钮" id="跑">跑栏贯验</button> <span id="果"></span></div>
-      <div class="表绕"><table><thead><tr><th>时刻</th><th>在栏</th><th>汇总报文</th><th>坏点</th><th>结果</th><th>说明</th></tr></thead><tbody id="表"></tbody></table></div>
+      <div class="横排 下距12" id="对账"></div>
+      <div class="表绕"><table><thead><tr><th>时刻</th><th>在栏</th><th>正式汇总报文</th><th>归档待删报文</th><th>坏点</th><th>结果</th><th>说明</th></tr></thead><tbody id="表"></tbody></table></div>
     </section>
     <script>
     async function 刷() {
+      const 账 = await 探栏.getJSON("/api/统计/汇总对账");
+      document.getElementById("对账").innerHTML =
+        `<div class="水卡"><div class="数">${账.正式.行数}</div><div class="标">正式汇总行</div></div>` +
+        `<div class="水卡"><div class="数">${账.正式.报文数}</div><div class="标">正式报文</div></div>` +
+        `<div class="水卡"><div class="数">${账.归档.行数}</div><div class="标">待删影子行</div></div>` +
+        `<div class="水卡"><div class="数">${账.归档.待删报文数}</div><div class="标">待删报文</div></div>` +
+        `<div class="水卡"><div class="标">正式齐套</div><div class="v">${账.正式齐套 ? 探栏.徽章("齐套","好") : 探栏.徽章("未齐套","危")}</div></div>`;
       const rows = await 探栏.getJSON("/api/栏贯验");
       const tb = document.getElementById("表"); tb.innerHTML = "";
+      if (!rows.length) { tb.innerHTML = `<tr><td colspan="7">${探栏.空态("尚无贯验。结栏后点跑栏贯验。")}</td></tr>`; return; }
       for (const r of rows) {
         const ok = r.是否对齐 ? 探栏.徽章("对齐","好") : 探栏.徽章("撕裂","危");
-        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.时刻)}</td><td>${r.在栏笔数}</td><td>${r.汇总报文数}</td><td>${r.坏点笔数}</td><td>${ok}</td><td>${探栏.安全文本(r.说明)}</td>`));
+        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.时刻)}</td><td>${r.在栏笔数}</td><td>${r.汇总报文数}</td><td>${r.归档待删报文 ?? "—"}</td><td>${r.坏点笔数}</td><td>${ok}</td><td>${探栏.安全文本(r.说明)}</td>`));
       }
     }
     document.getElementById("跑").onclick = async () => {

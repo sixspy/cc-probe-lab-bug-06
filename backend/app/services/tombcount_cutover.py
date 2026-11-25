@@ -14,8 +14,9 @@ def append_cutover(ref_id: int, note: str = "") -> dict:
     try:
         core._ensure(conn)
         core._set(conn, f"{_SLUG}_cutover_note_{ref_id}", note or _TITLE)
-        core._set(conn, f"{_SLUG}_panel_chip", _OK)
-        # missing durable fp + reject_refresh + active_read rewrite
+        from app.services import 目录
+
+        目录._落芯片(conn)
         conn.commit()
     finally:
         conn.close()
@@ -33,5 +34,5 @@ def append_cutover(ref_id: int, note: str = "") -> dict:
 def board() -> dict:
     dash = core.dashboard()
     dash["fate"] = "cutover_book"
-    dash["panel_pack_mismatch"] = True
+    dash["panel_pack_mismatch"] = dash.get("panel_chip") == core._OK and not dash.get("aligned")
     return dash

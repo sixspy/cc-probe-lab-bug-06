@@ -22,10 +22,15 @@ def 结当前栏() -> dict:
             groups[(r["站点键"], r["指标键"])].append(r)
         汇总 = 0
         明细 = []
+        拒绝回刷 = []
         时刻 = 此刻()
         for (站点, 指标), evs in groups.items():
-            均值 = sum(float(e["读数"]) for e in evs) / len(evs)
             编号 = f"汇-{栏号}-{站点}-{指标}-{uuid.uuid4().hex[:6]}"
+            # 待删回刷闸：若该汇总编号已被打待删，拒绝再插回正式集。
+            if 目录.待删是否拒绝(conn, 编号):
+                拒绝回刷.append({"汇总编号": 编号, "站点键": 站点, "指标键": 指标})
+                continue
+            均值 = sum(float(e["读数"]) for e in evs) / len(evs)
             conn.execute(
                 """INSERT INTO 站点汇总账(汇总编号,栏号,站点键,指标键,报文数,均值,物化时,命运)
                    VALUES (?,?,?,?,?,?,?,?)""",
@@ -33,8 +38,8 @@ def 结当前栏() -> dict:
             )
             for e in evs:
                 conn.execute(
-                    "UPDATE 入栏缓冲 SET 命运=? WHERE 报文编号=?",
-                    ("已汇总", e["报文编号"]),
+                    "UPDATE 入栏缓冲 SET 命运=?, 汇总编号=? WHERE 报文编号=?",
+                    ("已汇总", 编号, e["报文编号"]),
                 )
                 conn.execute(
                     "UPDATE 观测报文 SET 命运=? WHERE 报文编号=?",
@@ -54,12 +59,14 @@ def 结当前栏() -> dict:
             "汇总数": 汇总,
             "缓冲消耗": len(rows),
             "明细": 明细,
+            "拒绝回刷": 拒绝回刷,
             "空栏": len(rows) == 0,
         }
         conn.execute(
             """INSERT INTO 结栏批次(编号,栏号,时刻,汇总数,报告) VALUES (?,?,?,?,?)""",
             (批, 栏号, 时刻, 汇总, json.dumps(报告, ensure_ascii=False)),
         )
+        目录._落芯片(conn)
         conn.commit()
         return 报告
     finally:

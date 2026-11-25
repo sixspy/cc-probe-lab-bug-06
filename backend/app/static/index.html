@@ -31,6 +31,7 @@
     <section class="卷">
       <h2>水位</h2>
       <div class="水位" id="水位"></div>
+      <div class="横排 下距12" id="齐套条"></div>
       <div class="工具">
         <button class="按钮" id="灌入栏">灌入栏成汇总样例</button>
         <button class="按钮 次" id="灌坏点">灌坏点样例</button>
@@ -56,6 +57,13 @@
       const o = await 探栏.getJSON("/api/概览");
       探栏.渲染水位(document.getElementById("水位"), o);
       探栏.渲染门槛(document.getElementById("门槛条"), o.栏规 || {});
+      const 灯 = await 探栏.getJSON("/api/站点汇总账/齐套");
+      const 齐 = document.getElementById("齐套条");
+      const 判定 = 灯.假满 ? 探栏.徽章("齐套假满","危") : (灯.齐套 ? 探栏.徽章("齐套","好") : 探栏.徽章("未齐套","危"));
+      齐.innerHTML =
+        `<div class="水卡"><div class="数">${灯.齐套数}</div><div class="标">齐套（正式集）</div></div>` +
+        `<div class="水卡"><div class="数">${灯.影子行数}</div><div class="标">待删影子（已排除）</div></div>` +
+        `<div class="水卡"><div class="标">判定</div><div class="v">${判定}</div></div>`;
       const loads = await 探栏.getJSON("/api/装载批次");
       探栏.渲染批次表(document.getElementById("装载批次表"), loads, ["编号","时刻","入流","入栏","坏点"]);
       const closes = await 探栏.getJSON("/api/结栏批次");
@@ -96,7 +104,6 @@
     } catch (e) {}
   })();
   </script>
-<div id="data-tombcount" data-chip="齐套已亮" data-title="待删齐套" style="display:none"></div>
-<script>window.__tombcount_chip="齐套已亮";</script>
+<div id="data-tombcount" data-title="待删齐套" style="display:none"></div>
 </body>
 </html>

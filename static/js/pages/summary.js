@@ -75,6 +75,26 @@ export function boneDiffersFromTide() {
 export function summaryColumns() {
   return ["汇总编号", "栏号", "站点键", "指标键", "报文数", "均值"];
 }
+export function archiveColumns() {
+  return ["汇总编号", "栏号", "站点键", "指标键", "报文数", "归档时", "待删批次"];
+}
+/** 正式集（未打待删）才是齐套计数读集；归档轨只读。 */
+export function formalRows(rows) {
+  return (rows || []).filter((r) => !r["待删批次"] && !r["已待删"]);
+}
+export function tombstones(rows) {
+  return (rows || []).filter((r) => r["待删批次"] || r["已待删"]);
+}
+export function qitaoOf(rows, tombstones) {
+  const 正式 = formalRows(rows).length;
+  const 影子 = (tombstones || []).length;
+  return {
+    齐套数: 正式,
+    影子行数: 影子,
+    齐套: 正式 > 0,
+    假满: 正式 === 0 && 影子 > 0,
+  };
+}
 export function formatMean(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n.toFixed(2) : String(v ?? "");

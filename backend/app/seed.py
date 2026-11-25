@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS 入栏缓冲 (
   观测时 TEXT NOT NULL,
   栏号 TEXT NOT NULL,
   命运 TEXT NOT NULL DEFAULT '在栏',
-  入栏时 TEXT NOT NULL
+  入栏时 TEXT NOT NULL,
+  汇总编号 TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS 站点汇总账 (
   汇总编号 TEXT PRIMARY KEY,
@@ -80,6 +81,24 @@ CREATE TABLE IF NOT EXISTS 结栏批次 (
   汇总数 INTEGER NOT NULL DEFAULT 0,
   报告 TEXT NOT NULL DEFAULT '{}'
 );
+CREATE TABLE IF NOT EXISTS 汇总归档 (
+  汇总编号 TEXT PRIMARY KEY,
+  栏号 TEXT NOT NULL,
+  站点键 TEXT NOT NULL,
+  指标键 TEXT NOT NULL,
+  报文数 INTEGER NOT NULL,
+  均值 REAL NOT NULL,
+  物化时 TEXT NOT NULL,
+  归档时 TEXT NOT NULL,
+  待删批次 TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS 待删批次 (
+  批次 TEXT PRIMARY KEY,
+  目标编号 TEXT NOT NULL,
+  时刻 TEXT NOT NULL,
+  状态 TEXT NOT NULL DEFAULT '已归档',
+  说明 TEXT NOT NULL DEFAULT ''
+);
 """
 
 
@@ -88,11 +107,9 @@ def 此刻() -> str:
 
 
 def 初始化库() -> None:
-    # seed tombcount display chip
-
     conn = 连接()
     conn.executescript(建表)
-    _seed_tombcount_chip(conn)
+    _补列(conn)
     if conn.execute("SELECT COUNT(*) AS c FROM 栏规").fetchone()["c"] == 0:
         for k, v in {
             "当前栏号": "B-demo",
@@ -114,15 +131,10 @@ def 初始化库() -> None:
                 "INSERT INTO 站点源(源键,名称,介质,区域,说明) VALUES (?,?,?,?,?)",
                 row,
             )
-    conn.commit()
-    conn.close()
-
-
-
-def _seed_tombcount_chip(conn) -> None:
+    # 初始空库无正式汇总：芯片不得預亮「齐套已亮」，否则空正式仍绿。
     conn.execute(
         "INSERT INTO 探栏元(键,值) VALUES (?,?) ON CONFLICT(键) DO UPDATE SET 值=excluded.值",
-        ("tombcount_panel_chip", "齐套已亮"),
+        ("tombcount_panel_chip", "待删仍计"),
     )
     conn.execute(
         "INSERT INTO 探栏元(键,值) VALUES (?,?) ON CONFLICT(键) DO UPDATE SET 值=excluded.值",
@@ -132,3 +144,14 @@ def _seed_tombcount_chip(conn) -> None:
         "INSERT INTO 探栏元(键,值) VALUES (?,?) ON CONFLICT(键) DO UPDATE SET 值=excluded.值",
         ("tombcount_active_read", "old_track"),
     )
+    conn.commit()
+    conn.close()
+
+
+
+def _补列(conn) -> None:
+    """老库升级：入栏缓冲补汇总编号，以便两轨对账。"""
+    列 = {r["name"] for r in conn.execute("PRAGMA table_info(入栏缓冲)").fetchall()}
+    if "汇总编号" not in 列:
+        conn.execute("ALTER TABLE 入栏缓冲 ADD COLUMN 汇总编号 TEXT NOT NULL DEFAULT ''")
+
